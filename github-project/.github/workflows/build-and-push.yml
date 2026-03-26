@@ -1,0 +1,70 @@
+name: Build and Push to Zot
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # Step 1: Pull all secrets from your self-hosted Infisical instance.
+      # Only ONE GitHub Secret is needed: INFISICAL_TOKEN
+      # All other credentials are managed inside Infisical.
+      # ------------------------------------------------------------------
+      - name: Fetch Secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          method: "universal-auth"
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: "my-app"           # IMPORTANT: Replace with your Infisical project slug
+          env-slug: "prod"                  # IMPORTANT: Replace with your environment (dev/staging/prod)
+          domain: "https://secrets.bmd.ambrizal.net" # Your self-hosted Infisical URL
+          export-type: env                  # Exports secrets as environment variables
+
+      # ------------------------------------------------------------------
+      # Step 2: Login to your private Zot registry.
+      # REGISTRY_USER and REGISTRY_PASS are now injected from Infisical.
+      # ------------------------------------------------------------------
+      - name: Login to Private Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.bmd.ambrizal.net
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASS }}
+
+      # ------------------------------------------------------------------
+      # Step 3: Build and push the Docker image.
+      # ------------------------------------------------------------------
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend # Adjust this to your project's Dockerfile location
+          push: true
+          tags: registry.bmd.ambrizal.net/my-app/backend:latest # Adjust the tag accordingly
+
+      # ------------------------------------------------------------------
+      # Step 4: Set up kubectl using KUBECONFIG from Infisical.
+      # ------------------------------------------------------------------
+      - name: Set up Kubernetes Context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ env.KUBECONFIG_DATA }}
+
+      # ------------------------------------------------------------------
+      # Step 5: Deploy updated manifests and restart the deployment.
+      # ------------------------------------------------------------------
+      - name: Deploy to K3s Cluster
+        run: |
+          # Apply your Kubernetes manifests (Deployment, Service, Ingress)
+          kubectl apply -f ./deployment/
+
+          # Force a rolling update to pull the new 'latest' image
+          kubectl rollout restart deployment/backend-deployment -n dev

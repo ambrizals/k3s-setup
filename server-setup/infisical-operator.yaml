@@ -1,0 +1,24 @@
+# ============================================================
+# Infisical Kubernetes Operator
+# Installs the operator that syncs Infisical secrets into
+# native Kubernetes Secrets so pods can use them as env vars.
+# ============================================================
+#
+# Apply with:
+#   kubectl apply -f infisical-operator.yaml
+#
+# Alternatively, install via Helm:
+#   helm repo add infisical-helm-charts 'https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/'
+#   helm install --generate-name infisical-helm-charts/secrets-operator \
+#     --set infisicalDomain=https://secrets.bmd.ambrizal.net
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infisical-operator-system
+---
+# Install the operator using the official manifest
+# Source: https://raw.githubusercontent.com/Infisical/infisical/main/k8-operator/config/install/install.yaml
+# Run this command on your server to install the operator:
+#
+#   kubectl apply -f https://raw.githubusercontent.com/Infisical/infisical/main/k8-operator/config/install/install.yaml

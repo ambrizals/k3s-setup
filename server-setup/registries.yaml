@@ -1,0 +1,4 @@
+mirrors:
+  "registry.bmd.ambrizal.net":
+    endpoint:
+      - "http://zot-service.dev.svc.cluster.local:5000"

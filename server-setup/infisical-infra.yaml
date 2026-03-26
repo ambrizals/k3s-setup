@@ -1,0 +1,191 @@
+# ============================================================
+# Infisical - Self-hosted Secret Manager
+# Domain: secrets.bmd.ambrizal.net
+# Namespace: dev
+# ============================================================
+
+# ---- PostgreSQL for Infisical (dedicated instance) ----
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: infisical-pg-pvc
+  namespace: dev
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infisical-postgres
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infisical-postgres
+  template:
+    metadata:
+      labels:
+        app: infisical-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "infisical"
+        - name: POSTGRES_PASSWORD
+          value: "infisicalpassword" # IMPORTANT: Change this in production
+        - name: POSTGRES_DB
+          value: "infisical"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: pgdata
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: pgdata
+        persistentVolumeClaim:
+          claimName: infisical-pg-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infisical-postgres-service
+  namespace: dev
+spec:
+  selector:
+    app: infisical-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+# ---- Redis for Infisical ----
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infisical-redis
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infisical-redis
+  template:
+    metadata:
+      labels:
+        app: infisical-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infisical-redis-service
+  namespace: dev
+spec:
+  selector:
+    app: infisical-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+
+# ---- Infisical Application ----
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infisical
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infisical
+  template:
+    metadata:
+      labels:
+        app: infisical
+    spec:
+      containers:
+      - name: infisical
+        image: infisical/infisical:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # ---- Core Settings ----
+        - name: ENCRYPTION_KEY
+          value: "REPLACE_WITH_32_CHAR_RANDOM_STRING" # IMPORTANT: Generate with: openssl rand -hex 16
+        - name: AUTH_SECRET
+          value: "REPLACE_WITH_RANDOM_SECRET"          # IMPORTANT: Generate with: openssl rand -base64 32
+        - name: SITE_URL
+          value: "https://secrets.bmd.ambrizal.net"
+        # ---- Database ----
+        - name: DB_CONNECTION_URI
+          value: "postgresql://infisical:infisicalpassword@infisical-postgres-service:5432/infisical"
+        # ---- Redis ----
+        - name: REDIS_URL
+          value: "redis://infisical-redis-service:6379"
+        # ---- SMTP (optional - for email invites) ----
+        # - name: SMTP_HOST
+        #   value: "smtp.your-provider.com"
+        # - name: SMTP_PORT
+        #   value: "587"
+        # - name: SMTP_USERNAME
+        #   value: "your-smtp-user"
+        # - name: SMTP_PASSWORD
+        #   value: "your-smtp-password"
+        # - name: SMTP_FROM_ADDRESS
+        #   value: "no-reply@ambrizal.net"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infisical-service
+  namespace: dev
+spec:
+  selector:
+    app: infisical
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: infisical-ingress
+  namespace: dev
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  tls:
+  - hosts:
+    - secrets.bmd.ambrizal.net
+    secretName: infisical-tls
+  rules:
+  - host: secrets.bmd.ambrizal.net
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: infisical-service
+            port:
+              number: 8080

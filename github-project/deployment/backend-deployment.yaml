@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: registry.bmd.ambrizal.net/my-app/backend:latest
+        ports:
+        - containerPort: 8080 # Adjust this to the port your application listens on
+        # -------------------------------------------------------------------
+        # All environment variables (DB_HOST, DB_PASS, API_KEY, etc.) are
+        # automatically injected from the 'backend-secrets' Kubernetes Secret.
+        # This secret is continuously synced from your Infisical instance by
+        # the Infisical Operator (see server-setup/infisical-secret-sync.yaml).
+        #
+        # To add a new env var to your service:
+        #   1. Go to your Infisical dashboard → project → environment
+        #   2. Add the key/value (e.g. DB_HOST = postgres-service)
+        #   3. The operator auto-syncs it within 60 seconds — no redeployment needed.
+        # -------------------------------------------------------------------
+        envFrom:
+        - secretRef:
+            name: backend-secrets  # Created and synced by the Infisical Operator
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
