@@ -28,12 +28,13 @@ A template for your application repository. This is what you commit to your GitH
 
 ## 🚀 Getting Started
 
-### Step 1: Server Infrastructure
+### Step 0: Manual Pre-setup (Firewall & Ports)
+Before anything else, you must manually open ports **80**, **443**, and **6443** on your server's firewall (e.g., `ufw`) or cloud security group. Without this, your Ingress and CI/CD will not be reachable.
 
-Go to the [server-setup README](./server-setup/README.md) and follow Phases 1 through 8 to get your cluster ready.
+### Step 1: Server Infrastructure
+Go to the [server-setup README](./server-setup/README.md) and follow Phase 0 through 8 to get your cluster ready.
 
 ### Step 2: GitHub Configuration
-
 Go to the [github-project README](./github-project/README.md) to learn how to connect your application repository to your new K3s infrastructure.
 
 ---

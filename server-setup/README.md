@@ -13,6 +13,27 @@ Follow each phase in order.
 
 ---
 
+## Phase 0: Firewall & Port Configuration
+
+Before installing K3s, you MUST ensure your server's firewall allows traffic on the following ports. If you are using a cloud provider (AWS, DigitalOcean, etc.), update your **Security Group** or **Firewall Rules** accordingly.
+
+| Port | Protocol | Purpose |
+|---|---|---|
+| **80** | TCP | HTTP Traffic (Traefik Ingress) |
+| **443** | TCP | HTTPS Traffic (Traefik Ingress) |
+| **6443** | TCP | K3s API Server (Required for `kubectl` and CI/CD) |
+
+### On the Server (Ubuntu/Debian):
+If you are using `ufw`, run these commands:
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 6443/tcp
+sudo ufw reload
+```
+
+---
+
 ## Phase 1: K3s Registry Mirror
 
 Configure K3s to route image pulls to your private Zot registry.
