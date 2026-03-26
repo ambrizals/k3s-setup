@@ -71,19 +71,14 @@ jobs:
           method: kubeconfig
           kubeconfig: ${{ env.KUBECONFIG_DATA }}
 
-      # ------------------------------------------------------------------
-      # Step 5: Deploy updated manifests and restart the deployment.
-      # ------------------------------------------------------------------
       - name: Deploy to K3s Cluster
         run: |
-          # Replace placeholder in ingress
+          # Replace placeholders in manifests
           envsubst < ./deployment/backend-ingress.yaml > ./deployment/backend-ingress-final.yaml
+          envsubst < ./deployment/backend-deployment.yaml > ./deployment/backend-deployment-final.yaml
           
-          # Replace image tag in deployment template (if needed)
-          sed -i "s|backend:latest|backend:${{ env.IMAGE_TAG }}|g" ./deployment/backend-deployment.yaml
-
           # Apply manifests
-          kubectl apply -f ./deployment/backend-deployment.yaml
+          kubectl apply -f ./deployment/backend-deployment-final.yaml
           kubectl apply -f ./deployment/backend-service.yaml
           kubectl apply -f ./deployment/backend-ingress-final.yaml
 

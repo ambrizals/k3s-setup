@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: registry.bmd.ambrizal.net/my-app/backend:latest
+        image: registry.bmd.ambrizal.net/my-app/backend:${IMAGE_TAG}
         ports:
         - containerPort: 8080 # Adjust this to the port your application listens on
         # -------------------------------------------------------------------
