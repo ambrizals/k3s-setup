@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - api.bmd.ambrizal.net
+    - ${INGRESS_HOST}
     secretName: api-bmd-tls
   rules:
-  - host: api.bmd.ambrizal.net
+  - host: ${INGRESS_HOST}
     http:
       paths:
       - path: /
